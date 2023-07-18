@@ -1,7 +1,6 @@
 import ReactDOM from "react-dom";
-
 import React, { Component } from "react";
-import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
+import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils } from "draft-js";
 import Editor, { composeDecorators } from "draft-js-plugins-editor";
 import createMentionPlugin, {
   defaultSuggestionsFilter,
@@ -12,23 +11,14 @@ import "draft-js-static-toolbar-plugin/lib/plugin.css";
 import "draft-js-image-plugin/lib/plugin.css";
 import "draft-js-alignment-plugin/lib/plugin.css";
 import "draft-js-focus-plugin/lib/plugin.css";
-
-import createToolbarPlugin from "draft-js-static-toolbar-plugin";
+import createToolbarPlugin, { Separator } from "draft-js-static-toolbar-plugin";
 import { draftToMarkdown } from "markdown-draft-js";
 import createImagePlugin from "draft-js-image-plugin";
-
 import createAlignmentPlugin from "draft-js-alignment-plugin";
-
 import createFocusPlugin from "draft-js-focus-plugin";
-
 import createResizeablePlugin from "draft-js-resizeable-plugin";
-
 import createBlockDndPlugin from "draft-js-drag-n-drop-plugin";
-
-import createDragNDropUploadPlugin, {
-  readFile,
-} from "@mikeljames/draft-js-drag-n-drop-upload-plugin";
-
+import createDragNDropUploadPlugin, { readFile } from "@mikeljames/draft-js-drag-n-drop-upload-plugin";
 import {
   ItalicButton,
   BoldButton,
@@ -124,6 +114,62 @@ function mockUpload(data, success, failed, progress) {
   doProgress();
 }
 
+class AddImagePopup extends Component {
+  state = {
+    imageUrl: "",
+  };
+
+  handleInputChange = (event) => {
+    this.setState({
+      imageUrl: event.target.value,
+    });
+  };
+
+  handleInsertImage = () => {
+    const { onInsertImage } = this.props;
+    const { imageUrl } = this.state;
+    onInsertImage(imageUrl);
+    this.setState({
+      imageUrl: "",
+    });
+  };
+
+  render() {
+    const { isOpen, onClose } = this.props;
+    const { imageUrl } = this.state;
+
+    if (!isOpen) {
+      return null;
+    }
+
+    return (
+      <div className="image-popup">
+        <div className="image-popup-content">
+          <div className="image-popup-header">
+            <span className="image-popup-title">Insert Image</span>
+            <button className="image-popup-close" onClick={onClose}>
+              &times;
+            </button>
+          </div>
+          <div className="image-popup-body">
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={this.handleInputChange}
+              placeholder="Enter image URL"
+            />
+          </div>
+          <div className="image-popup-footer">
+            <button className="image-popup-insert" onClick={this.handleInsertImage}>
+              Insert
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
     super(props);
@@ -146,6 +192,7 @@ export default class SimpleMentionEditor extends Component {
   state = {
     editorState: EditorState.createWithContent(convertFromRaw(initialState)),
     suggestions: mentions,
+    isImagePopupOpen: false,
   };
 
   onChange = (editorState) => {
@@ -166,6 +213,24 @@ export default class SimpleMentionEditor extends Component {
 
   focus = () => {
     this.editor.focus();
+  };
+
+  handleInsertImage = (imageUrl) => {
+    const { editorState } = this.state;
+    const contentState = editorState.getCurrentContent();
+    const contentStateWithEntity = contentState.createEntity("IMAGE", "IMMUTABLE", { src: imageUrl });
+    const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+    const newEditorState = EditorState.set(editorState, { currentContent: contentStateWithEntity });
+    this.setState({
+      editorState: AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, " "),
+      isImagePopupOpen: false,
+    });
+  };
+
+  toggleImagePopup = () => {
+    this.setState((prevState) => ({
+      isImagePopupOpen: !prevState.isImagePopupOpen,
+    }));
   };
 
   renderMarkdown = () => {
@@ -202,25 +267,32 @@ export default class SimpleMentionEditor extends Component {
     ];
 
     return (
-      <div>
-        <div className={"editor"} onClick={this.focus}>
+      <div className="editor-container">
+        <div className="toolbar">
           <Toolbar>
             {(externalProps) => (
-              <div>
-                <HeadlineOneButton {...externalProps} />
-                <HeadlineTwoButton {...externalProps} />
-                <HeadlineThreeButton {...externalProps} />
-
-                <BoldButton {...externalProps} />
-                <ItalicButton {...externalProps} />
-                <UnderlineButton {...externalProps} />
-                <CodeButton {...externalProps} />
-                <UnorderedListButton {...externalProps} />
-                <OrderedListButton {...externalProps} />
-                <BlockquoteButton {...externalProps} />
-              </div>
+              <React.Fragment>
+                <div className="toolbar-row">
+                  <HeadlineOneButton {...externalProps} />
+                  <HeadlineTwoButton {...externalProps} />
+                  <HeadlineThreeButton {...externalProps} />
+                </div>
+                <div className="toolbar-row">
+                  <BoldButton {...externalProps} />
+                  <ItalicButton {...externalProps} />
+                  <UnderlineButton {...externalProps} />
+                  <CodeButton {...externalProps} />
+                </div>
+                <div className="toolbar-row">
+                  <UnorderedListButton {...externalProps} />
+                  <OrderedListButton {...externalProps} />
+                  <BlockquoteButton {...externalProps} />
+                </div>
+              </React.Fragment>
             )}
           </Toolbar>
+        </div>
+        <div className="editor" onClick={this.focus}>
           <Editor
             editorState={this.state.editorState}
             onChange={this.onChange}
@@ -234,10 +306,17 @@ export default class SimpleMentionEditor extends Component {
             suggestions={this.state.suggestions}
             onAddMention={this.onAddMention}
           />
-
+          <div className="add-image-icon" onClick={this.toggleImagePopup}>
+            +
+          </div>
           <AlignmentTool />
         </div>
         <hr />
+        <AddImagePopup
+          isOpen={this.state.isImagePopupOpen}
+          onClose={this.toggleImagePopup}
+          onInsertImage={this.handleInsertImage}
+        />
       </div>
     );
   }
