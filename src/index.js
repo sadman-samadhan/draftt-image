@@ -18,7 +18,10 @@ import createAlignmentPlugin from "draft-js-alignment-plugin";
 import createFocusPlugin from "draft-js-focus-plugin";
 import createResizeablePlugin from "draft-js-resizeable-plugin";
 import createBlockDndPlugin from "draft-js-drag-n-drop-plugin";
+import createVideoPlugin from "draft-js-video-plugin";
 import createDragNDropUploadPlugin, { readFile } from "@mikeljames/draft-js-drag-n-drop-upload-plugin";
+import VideoAdd from "./videoAdd"
+
 import {
   ItalicButton,
   BoldButton,
@@ -51,7 +54,7 @@ const initialState = {
   blocks: [
     {
       key: "9gm3s",
-      text: "You can have images in your text field. This is a very rudimentary example, but you can enhance the image plugin with resizing, focus or alignment plugins.",
+      text: "Hello...",
       type: "unstyled",
       depth: 0,
       inlineStyleRanges: [],
@@ -75,7 +78,7 @@ const initialState = {
     },
     {
       key: "e23a8",
-      text: "See advanced examples further down …",
+      text: "Write here",
       type: "unstyled",
       depth: 0,
       inlineStyleRanges: [],
@@ -177,6 +180,7 @@ export default class SimpleMentionEditor extends Component {
     this.toolbarPlugin = createToolbarPlugin();
 
     this.imagePlugin = createImagePlugin({ decorator });
+    this.videoPlugin = createVideoPlugin({ decorator });
 
     this.dragNDropFileUploadPlugin = createDragNDropUploadPlugin({
       handleUpload: mockUpload,
@@ -233,6 +237,26 @@ export default class SimpleMentionEditor extends Component {
     }));
   };
 
+  handleInsertVideo = (videoUrl) => {
+    const { editorState } = this.state;
+    const contentState = editorState.getCurrentContent();
+    console.log(videoUrl);
+    const contentStateWithEntity = contentState.createEntity("video", "IMMUTABLE", { src: videoUrl });
+    const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+
+    // Use EditorState.push to efficiently update the content state
+    const newEditorState = EditorState.push(
+      editorState,
+      contentStateWithEntity,
+      "create-entity"
+    );
+
+    this.setState({
+      editorState: AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, " "),
+      isVideoPopupOpen: false,
+    });
+  };
+
   renderMarkdown = () => {
     const contentState = this.state.editorState.getCurrentContent();
     const foo = convertToRaw(contentState);
@@ -251,6 +275,54 @@ export default class SimpleMentionEditor extends Component {
     });
   };
 
+  onVideoInsert = (editorState) => {
+    // Give option for get video html tag
+    // This option use for covert  to html tag
+
+    let options = {
+      entityStyleFn: (entity) => {
+        const entityType = entity.get("type").toLowerCase();
+        // For video
+        if (entityType === "draft-js-video-plugin-video") {
+          const data = entity.getData();
+          return {
+            element: "iframe",
+            attributes: {
+              src: data.src
+            },
+            style: {
+              // Put styles here...
+            }
+          };
+        }
+
+        // for Image
+        if (entityType === "image") {
+          const data = entity.getData();
+          return {
+            element: "img",
+            attributes: {
+              src: data.src
+            },
+            style: {
+              // width: '100px'
+            }
+          };
+        }
+        return null;
+      }
+    };
+
+    // Use for console only
+ 
+    // see this url for image example https://github.com/sstur/draft-js-utils/pull/85/files
+
+    this.setState({
+      editorState
+    });
+  };
+
+
   render() {
     const { MentionSuggestions } = this.mentionPlugin;
     const { Toolbar } = this.toolbarPlugin;
@@ -264,6 +336,7 @@ export default class SimpleMentionEditor extends Component {
       alignmentPlugin,
       resizeablePlugin,
       this.imagePlugin,
+      this.videoPlugin,
     ];
 
     return (
@@ -316,6 +389,11 @@ export default class SimpleMentionEditor extends Component {
           isOpen={this.state.isImagePopupOpen}
           onClose={this.toggleImagePopup}
           onInsertImage={this.handleInsertImage}
+        />
+        <VideoAdd
+          editorState={this.state.editorState}
+          onChange={this.onVideoInsert}
+          modifier={this.videoPlugin.addVideo}
         />
       </div>
     );
