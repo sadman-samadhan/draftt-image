@@ -4,85 +4,49 @@ import styles from "./styles.css";
 export default class VideoAdd extends Component {
   // Start the popover closed
   state = {
-    url: "",
-    open: false
+    videoUrl: "",
+    isVideoPopupOpen: false,
+
   };
 
-  // When the popover is open and users click anywhere on the page,
-  // the popover should close
-  componentDidMount() {
-    document.addEventListener("click", this.closePopover);
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener("click", this.closePopover);
-  }
-
-  // Note: make sure whenever a click happens within the popover it is not closed
-  onPopoverClick = () => {
-    this.preventNextClose = true;
-  };
-
-  openPopover = () => {
-    if (!this.state.open) {
-      this.preventNextClose = true;
-      this.setState({
-        open: true
-      });
-    }
-  };
-
-  closePopover = () => {
-    if (!this.preventNextClose && this.state.open) {
-      this.setState({
-        open: false
-      });
-    }
-
-    this.preventNextClose = false;
-  };
 
   addVideo = () => {
     const { editorState, onChange } = this.props;
-    onChange(this.props.modifier(editorState, { src: this.state.url }));
+    onChange(this.props.modifier(editorState, { src: this.state.videoUrl }));
   };
 
-  changeUrl = (evt) => {
-    this.setState({ url: evt.target.value });
+  changeVideoUrl = (evt) => {
+    this.setState({ videoUrl: evt.target.value });
   };
 
   render() {
-    const popoverClassName = this.state.open
-      ? styles.addVideoPopover
-      : styles.addVideoClosedPopover;
-    const buttonClassName = this.state.open
-      ? styles.addVideoPressedButton
-      : styles.addVideoButton;
+    const { isOpen, onClose } = this.props;
 
+    if (!isOpen) {
+      return null;
+    }
     return (
-      <div className={styles.addVideo}>
-        <button
-          className={buttonClassName}
-          onMouseUp={this.openPopover}
-          type="button"
-        >
-          +
-        </button>
-        <div className={popoverClassName} onClick={this.onPopoverClick}>
-          <input
-            type="text"
-            placeholder="Paste the video url …"
-            className={styles.addVideoInput}
-            onChange={this.changeUrl}
-            value={this.state.url}
-          />
-          <button
-            className={styles.addVideoConfirmButton}
-            type="button"
-            onClick={this.addVideo}
-          >
-            Add
-          </button>
+      <div className="image-popup">
+        <div className="image-popup-content">
+          <div className="image-popup-header">
+            <span className="image-popup-title">Insert Video</span>
+            <button className="image-popup-close" onClick={onClose}>
+              &times;
+            </button>
+          </div>
+          <div className="image-popup-body">
+            <input
+              type="text"
+              onChange={this.changeVideoUrl}
+              value={this.state.videoUrl}
+              placeholder="Enter video videoUrl"
+            />
+          </div>
+          <div className="image-popup-footer">
+            <button className="image-popup-insert" onClick={this.addVideo}>
+              Insert
+            </button>
+          </div>
         </div>
       </div>
     );

@@ -20,7 +20,8 @@ import createResizeablePlugin from "draft-js-resizeable-plugin";
 import createBlockDndPlugin from "draft-js-drag-n-drop-plugin";
 import createVideoPlugin from "draft-js-video-plugin";
 import createDragNDropUploadPlugin, { readFile } from "@mikeljames/draft-js-drag-n-drop-upload-plugin";
-import VideoAdd from "./videoAdd"
+import VideoAdd from "./videoAdd";
+import AddImagePopup from "./imageAdd";
 
 import {
   ItalicButton,
@@ -117,61 +118,26 @@ function mockUpload(data, success, failed, progress) {
   doProgress();
 }
 
-class AddImagePopup extends Component {
-  state = {
-    imageUrl: "",
-  };
+function MediaPopup({ isOpen, onClose, onImageSelect, onVideoSelect }) {
+  if (!isOpen) return null;
 
-  handleInputChange = (event) => {
-    this.setState({
-      imageUrl: event.target.value,
-    });
-  };
-
-  handleInsertImage = () => {
-    const { onInsertImage } = this.props;
-    const { imageUrl } = this.state;
-    onInsertImage(imageUrl);
-    this.setState({
-      imageUrl: "",
-    });
-  };
-
-  render() {
-    const { isOpen, onClose } = this.props;
-    const { imageUrl } = this.state;
-
-    if (!isOpen) {
-      return null;
-    }
-
-    return (
-      <div className="image-popup">
-        <div className="image-popup-content">
-          <div className="image-popup-header">
-            <span className="image-popup-title">Insert Image</span>
-            <button className="image-popup-close" onClick={onClose}>
-              &times;
-            </button>
-          </div>
-          <div className="image-popup-body">
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={this.handleInputChange}
-              placeholder="Enter image URL"
-            />
-          </div>
-          <div className="image-popup-footer">
-            <button className="image-popup-insert" onClick={this.handleInsertImage}>
-              Insert
-            </button>
-          </div>
+  return (
+    <div className="add-media-popup">
+      <div className="add-media-popup-content">
+        <div className="add-media-option" onClick={onImageSelect}>
+          Add Image
+        </div>
+        <div className="add-media-option" onClick={onVideoSelect}>
+          Add Video
+        </div>
+        <div className="add-media-option" onClick={onClose}>
+          Cancel
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
+
 
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
@@ -197,6 +163,7 @@ export default class SimpleMentionEditor extends Component {
     editorState: EditorState.createWithContent(convertFromRaw(initialState)),
     suggestions: mentions,
     isImagePopupOpen: false,
+    isVideoPopupOpen: false,
   };
 
   onChange = (editorState) => {
@@ -237,24 +204,16 @@ export default class SimpleMentionEditor extends Component {
     }));
   };
 
-  handleInsertVideo = (videoUrl) => {
-    const { editorState } = this.state;
-    const contentState = editorState.getCurrentContent();
-    console.log(videoUrl);
-    const contentStateWithEntity = contentState.createEntity("video", "IMMUTABLE", { src: videoUrl });
-    const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+  toggleVideoPopup = () => {
+    this.setState((prevState) => ({
+      isVideoPopupOpen: !prevState.isVideoPopupOpen,
+    }));
+  };
 
-    // Use EditorState.push to efficiently update the content state
-    const newEditorState = EditorState.push(
-      editorState,
-      contentStateWithEntity,
-      "create-entity"
-    );
-
-    this.setState({
-      editorState: AtomicBlockUtils.insertAtomicBlock(newEditorState, entityKey, " "),
-      isVideoPopupOpen: false,
-    });
+  toggleMediaPopup = () => {
+    this.setState((prevState) => ({
+      isMediaPopupOpen: !prevState.isMediaPopupOpen,
+    }));
   };
 
   renderMarkdown = () => {
@@ -276,49 +235,9 @@ export default class SimpleMentionEditor extends Component {
   };
 
   onVideoInsert = (editorState) => {
-    // Give option for get video html tag
-    // This option use for covert  to html tag
-
-    let options = {
-      entityStyleFn: (entity) => {
-        const entityType = entity.get("type").toLowerCase();
-        // For video
-        if (entityType === "draft-js-video-plugin-video") {
-          const data = entity.getData();
-          return {
-            element: "iframe",
-            attributes: {
-              src: data.src
-            },
-            style: {
-              // Put styles here...
-            }
-          };
-        }
-
-        // for Image
-        if (entityType === "image") {
-          const data = entity.getData();
-          return {
-            element: "img",
-            attributes: {
-              src: data.src
-            },
-            style: {
-              // width: '100px'
-            }
-          };
-        }
-        return null;
-      }
-    };
-
-    // Use for console only
- 
-    // see this url for image example https://github.com/sstur/draft-js-utils/pull/85/files
-
     this.setState({
-      editorState
+      editorState,
+      isVideoPopupOpen: false,
     });
   };
 
@@ -379,10 +298,22 @@ export default class SimpleMentionEditor extends Component {
             suggestions={this.state.suggestions}
             onAddMention={this.onAddMention}
           />
-          <div className="add-image-icon" onClick={this.toggleImagePopup}>
-            +
-          </div>
+          <div className="add-media-icon" onClick={this.toggleMediaPopup}>
+          +
+        </div>
           <AlignmentTool />
+          <MediaPopup
+          isOpen={this.state.isMediaPopupOpen}
+          onClose={this.toggleMediaPopup}
+          onImageSelect={() => {
+            this.toggleMediaPopup();
+            this.setState({ isImagePopupOpen: true });
+          }}
+          onVideoSelect={() => {
+            this.toggleMediaPopup();
+            this.setState({ isVideoPopupOpen: true });
+          }}
+        />
         </div>
         <hr />
         <AddImagePopup
@@ -391,6 +322,8 @@ export default class SimpleMentionEditor extends Component {
           onInsertImage={this.handleInsertImage}
         />
         <VideoAdd
+          isOpen={this.state.isVideoPopupOpen}
+          onClose={this.toggleVideoPopup}
           editorState={this.state.editorState}
           onChange={this.onVideoInsert}
           modifier={this.videoPlugin.addVideo}
