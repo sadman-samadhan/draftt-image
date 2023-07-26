@@ -118,12 +118,10 @@ function mockUpload(data, success, failed, progress) {
   doProgress();
 }
 
-function MediaPopup({ isOpen, onClose, onImageSelect, onVideoSelect }) {
-  if (!isOpen) return null;
-
+function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect }) {
   return (
-    <div className="add-media-popup">
-      <div className="add-media-popup-content">
+    <div className={`media-sidebar ${isOpen ? "open" : ""}`}>
+      <div className="media-sidebar-content">
         <div className="add-media-option" onClick={onImageSelect}>
           Add Image
         </div>
@@ -137,7 +135,6 @@ function MediaPopup({ isOpen, onClose, onImageSelect, onVideoSelect }) {
     </div>
   );
 }
-
 
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
@@ -210,9 +207,9 @@ export default class SimpleMentionEditor extends Component {
     }));
   };
 
-  toggleMediaPopup = () => {
+  toggleMediaSidebar = () => {
     this.setState((prevState) => ({
-      isMediaPopupOpen: !prevState.isMediaPopupOpen,
+      isMediaSidebarOpen: !prevState.isMediaSidebarOpen,
     }));
   };
 
@@ -298,19 +295,19 @@ export default class SimpleMentionEditor extends Component {
             suggestions={this.state.suggestions}
             onAddMention={this.onAddMention}
           />
-          <div className="add-media-icon" onClick={this.toggleMediaPopup}>
+          <div className="add-media-icon" onClick={this.toggleMediaSidebar}>
           +
         </div>
           <AlignmentTool />
-          <MediaPopup
-          isOpen={this.state.isMediaPopupOpen}
-          onClose={this.toggleMediaPopup}
+          <MediaSidebar
+          isOpen={this.state.isMediaSidebarOpen}
+          onClose={this.toggleMediaSidebar}
           onImageSelect={() => {
-            this.toggleMediaPopup();
+            this.toggleMediaSidebar();
             this.setState({ isImagePopupOpen: true });
           }}
           onVideoSelect={() => {
-            this.toggleMediaPopup();
+            this.toggleMediaSidebar();
             this.setState({ isVideoPopupOpen: true });
           }}
         />

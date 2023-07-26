@@ -171,3 +171,39 @@
 .add-media-option:hover {
   background-color: #f1f1f1;
 }
+.media-sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 300px;
+  height: 100%;
+  background-color: #fff;
+  border-left: 1px solid #ddd;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  transition: right 0.3s ease;
+}
+
+.media-sidebar.open {
+  right: 0;
+}
+
+.media-sidebar-content {
+  padding: 20px;
+}
+
+.add-media-option {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 16px;
+  border-bottom: 1px solid #ddd;
+  transition: background-color 0.3s ease;
+}
+
+.add-media-option:last-child {
+  border-bottom: none;
+}
+
+.add-media-option:hover {
+  background-color: #f1f1f1;
+}
