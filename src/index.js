@@ -1,6 +1,6 @@
 import ReactDOM from "react-dom";
 import React, { Component } from "react";
-import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils } from "draft-js";
+import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils, ContentBlock, genKey } from "draft-js";
 import Editor, { composeDecorators } from "draft-js-plugins-editor";
 import createMentionPlugin, {
   defaultSuggestionsFilter,
@@ -118,7 +118,7 @@ function mockUpload(data, success, failed, progress) {
   doProgress();
 }
 
-function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect }) {
+function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect, onAddBlock }) {
   return (
     <div className={`media-sidebar ${isOpen ? "open" : ""}`}>
       <div className="media-sidebar-content">
@@ -128,6 +128,9 @@ function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect }) {
         <div className="add-media-option" onClick={onVideoSelect}>
           Add Video
         </div>
+        <div className="add-media-option" onClick={onAddBlock}>
+          Add Block
+        </div>
         <div className="add-media-option" onClick={onClose}>
           Cancel
         </div>
@@ -135,7 +138,6 @@ function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect }) {
     </div>
   );
 }
-
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
     super(props);
@@ -238,6 +240,24 @@ export default class SimpleMentionEditor extends Component {
     });
   };
 
+  handleAddBlock = () => {
+    const { editorState } = this.state;
+    const contentState = editorState.getCurrentContent();
+    const newBlock = new ContentBlock({
+      key: genKey(),
+      type: "unstyled", // Change this to the desired block type, e.g., "header-one", "unordered-list-item", etc.
+      text: "New paragraph of text", // Change this to the desired text for the new block
+    });
+    const newBlockMap = contentState.getBlockMap().set(newBlock.getKey(), newBlock);
+    const newContentState = contentState.merge({
+      blockMap: newBlockMap,
+      selectionAfter: contentState.getSelectionAfter().set("anchorKey", newBlock.getKey()),
+    });
+    const newEditorState = EditorState.push(editorState, newContentState, "insert-fragment");
+    this.setState({ editorState: EditorState.forceSelection(newEditorState, newContentState.getSelectionAfter()) });
+
+    console.log("Hi");
+  };
 
   render() {
     const { MentionSuggestions } = this.mentionPlugin;
@@ -309,6 +329,10 @@ export default class SimpleMentionEditor extends Component {
           onVideoSelect={() => {
             this.toggleMediaSidebar();
             this.setState({ isVideoPopupOpen: true });
+          }}
+          onAddBlock={() => {
+            this.toggleMediaSidebar();
+            this.handleAddBlock();
           }}
         />
         </div>
