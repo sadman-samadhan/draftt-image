@@ -1,6 +1,6 @@
 import ReactDOM from "react-dom";
 import React, { Component } from "react";
-import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils, ContentBlock, genKey } from "draft-js";
+import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils, ContentBlock, Modifier, genKey } from "draft-js";
 import Editor, { composeDecorators } from "draft-js-plugins-editor";
 import createMentionPlugin, {
   defaultSuggestionsFilter,
@@ -138,6 +138,40 @@ function MediaSidebar({ isOpen, onClose, onImageSelect, onVideoSelect, onAddBloc
     </div>
   );
 }
+
+const handleAddBlock = (editorState) => {
+  console.log("Hi");
+  const contentState = editorState.getCurrentContent();
+  const contentStateWithEntity = contentState.createEntity("TEST", "MUTABLE", {
+    a: "b"
+  });
+  const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
+  const newEditorState = EditorState.set(editorState, {
+    currentContent: contentStateWithEntity
+  });
+  return AtomicBlockUtils.insertAtomicBlock(
+    newEditorState,
+    entityKey,
+    "The quick brown fox jumps over the lazy dog. The sun sets in the west, painting the sky with hues of orange and pink. Birds chirp as day turns to night "
+  );
+};
+
+
+const blockRenderer = (contentBlock) => {
+  const type = contentBlock.getType();
+  // console.log("contentBlock");
+  // console.log(contentBlock);
+  // console.log(type);
+  if (type === "atomic") {
+    return {
+      // component: Component,
+      editable: true,
+      props: {
+        octData: "custom template"
+      }
+    };
+  }
+};
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
     super(props);
@@ -159,7 +193,7 @@ export default class SimpleMentionEditor extends Component {
   }
 
   state = {
-    editorState: EditorState.createWithContent(convertFromRaw(initialState)),
+    editorState: EditorState.createEmpty(),
     suggestions: mentions,
     isImagePopupOpen: false,
     isVideoPopupOpen: false,
@@ -242,21 +276,10 @@ export default class SimpleMentionEditor extends Component {
 
   handleAddBlock = () => {
     const { editorState } = this.state;
-    const contentState = editorState.getCurrentContent();
-    const newBlock = new ContentBlock({
-      key: genKey(),
-      type: "unstyled", // Change this to the desired block type, e.g., "header-one", "unordered-list-item", etc.
-      text: "New paragraph of text", // Change this to the desired text for the new block
-    });
-    const newBlockMap = contentState.getBlockMap().set(newBlock.getKey(), newBlock);
-    const newContentState = contentState.merge({
-      blockMap: newBlockMap,
-      selectionAfter: contentState.getSelectionAfter().set("anchorKey", newBlock.getKey()),
-    });
-    const newEditorState = EditorState.push(editorState, newContentState, "insert-fragment");
-    this.setState({ editorState: EditorState.forceSelection(newEditorState, newContentState.getSelectionAfter()) });
 
-    console.log("Hi");
+    this.setState({
+      editorState: handleAddBlock(editorState)
+    });
   };
 
   render() {
@@ -309,6 +332,7 @@ export default class SimpleMentionEditor extends Component {
             ref={(element) => {
               this.editor = element;
             }}
+            blockRendererFn={blockRenderer}
           />
           <MentionSuggestions
             onSearchChange={this.onSearchChange}
@@ -331,7 +355,7 @@ export default class SimpleMentionEditor extends Component {
             this.setState({ isVideoPopupOpen: true });
           }}
           onAddBlock={() => {
-            this.toggleMediaSidebar();
+            // this.toggleMediaSidebar();
             this.handleAddBlock();
           }}
         />
