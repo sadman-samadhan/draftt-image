@@ -1,6 +1,6 @@
 import ReactDOM from "react-dom";
 import React, { Component } from "react";
-import { EditorState, convertToRaw, convertFromRaw, AtomicBlockUtils, ContentBlock, Modifier, genKey } from "draft-js";
+import { EditorState, EditorBlock, convertToRaw, convertFromRaw, AtomicBlockUtils, ContentBlock, Modifier, genKey } from "draft-js";
 import Editor, { composeDecorators } from "draft-js-plugins-editor";
 import createMentionPlugin, {
   defaultSuggestionsFilter,
@@ -149,11 +149,15 @@ const handleAddBlock = (editorState) => {
   const newEditorState = EditorState.set(editorState, {
     currentContent: contentStateWithEntity
   });
-  return AtomicBlockUtils.insertAtomicBlock(
+  
+  var temp=  AtomicBlockUtils.insertAtomicBlock(
     newEditorState,
     entityKey,
-    "The quick brown fox jumps over the lazy dog. The sun sets in the west, painting the sky with hues of orange and pink. Birds chirp as day turns to night "
+    "<h1>The quick brown fox jumps over the lazy dog. The sun sets in the west, painting the sky with hues of orange and pink. Birds chirp as day turns to night </h1>"
   );
+
+  console.log(temp);
+  return temp;
 };
 
 
@@ -164,7 +168,7 @@ const blockRenderer = (contentBlock) => {
   // console.log(type);
   if (type === "atomic") {
     return {
-      // component: Component,
+      component: blockComponent,
       editable: true,
       props: {
         octData: "custom template"
@@ -172,6 +176,59 @@ const blockRenderer = (contentBlock) => {
     };
   }
 };
+
+
+const blockComponent = (props) => {
+  // const { block, contentState, blockProps } = props;
+  // const entity = block.getEntityAt(0);
+  //const data =
+  //contentState && contentState.getEntity(block.getEntityAt(0)).getData();
+  // console.log(block);
+  // console.log(props, entity, blockProps);
+
+
+  return (
+    <div
+      //contentEditable={false}
+      style={{
+        border: "1px solid #003366",
+        backgroundColor: "#f1f1f1",
+        width: "50%",
+        height: "120px",
+        display: "flex",
+        justifyContent: "flex-start",
+        alignItems: "flex-start",
+        flexDirection: "row"
+      }}
+    >
+
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          height: "100%",
+          overflow: "auto",
+          justifyContent: "center"
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid #000",
+            padding: "15px",
+            width: "80%",
+            display: "flex",
+            alignSelf: "center"
+          }}
+        >
+        
+        <EditorBlock {...props} />
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default class SimpleMentionEditor extends Component {
   constructor(props) {
     super(props);
@@ -324,7 +381,7 @@ export default class SimpleMentionEditor extends Component {
             )}
           </Toolbar>
         </div>
-        <div className="editor" onClick={this.focus}>
+        <div className="editor">
           <Editor
             editorState={this.state.editorState}
             onChange={this.onChange}
@@ -355,7 +412,7 @@ export default class SimpleMentionEditor extends Component {
             this.setState({ isVideoPopupOpen: true });
           }}
           onAddBlock={() => {
-            // this.toggleMediaSidebar();
+            this.toggleMediaSidebar();
             this.handleAddBlock();
           }}
         />
